@@ -9,6 +9,8 @@ import org.springframework.web.server.ResponseStatusException;
 import org.upgrad.upstac.testrequests.TestRequest;
 import org.upgrad.upstac.testrequests.consultation.ConsultationController;
 import org.upgrad.upstac.testrequests.consultation.CreateConsultationRequest;
+import org.upgrad.upstac.testrequests.consultation.DoctorSuggestion;
+import org.upgrad.upstac.testrequests.lab.CreateLabResult;
 import org.upgrad.upstac.testrequests.lab.TestStatus;
 import org.upgrad.upstac.testrequests.RequestStatus;
 import org.upgrad.upstac.testrequests.TestRequestQueryService;
@@ -18,6 +20,8 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.hamcrest.core.Is;
 
 @SpringBootTest
 @Slf4j
@@ -47,7 +51,19 @@ class ConsultationControllerTest {
 		// make use of assertNotNull() method to make sure that the consultation value
 		// of second object is not null
 		// use getConsultation() method to get the lab result
-
+		
+		TestRequest testRequestConsulation = new TestRequest();
+		testRequestConsulation = consultationController.assignForConsultation(testRequest.getRequestId());
+		
+		
+		
+		assertThat("the request ids of both the objects created should be same", testRequest.getRequestId() == testRequestConsulation.getRequestId());
+		assertThat("the status of the second object should be equal to 'DIAGNOSIS_IN_PROCESS'", testRequestConsulation.getStatus().equals(RequestStatus.DIAGNOSIS_IN_PROCESS));
+		
+		
+		assertNotNull(testRequestConsulation != null, "testRequestConsulation object value is not null");
+		
+		testRequestConsulation.getConsultation();
 	}
 
 	public TestRequest getTestRequestByStatus(RequestStatus status) {
@@ -68,7 +84,12 @@ class ConsultationControllerTest {
 
 		// Use assertThat() method to perform the following comparison
 		// the exception message should be contain the string "Invalid ID"
-
+		
+		ResponseStatusException result = assertThrows(ResponseStatusException.class, () -> {
+			consultationController.assignForConsultation(InvalidRequestId);
+		});
+		
+		assertThat("Invalid ID", result.getReason().equals("Invalid ID"));
 	}
 
 	@Test
@@ -93,7 +114,14 @@ class ConsultationControllerTest {
 		// 2. the status of the second object should be equal to 'COMPLETED'
 		// 3. the suggestion of both the objects created should be same. Make use of
 		// getSuggestion() method to get the results.
-
+		CreateConsultationRequest createConsultationRequest = getCreateConsultationRequest(testRequest);
+		
+		TestRequest testRequestUpdate = consultationController.updateConsultation(testRequest.getRequestId(), createConsultationRequest);
+		testRequestUpdate.setStatus(RequestStatus.COMPLETED);
+		
+		assertThat("The request ids of both the objects created should be same", testRequest.getRequestId() == testRequestUpdate.getRequestId());
+		assertThat("The status of the second object should be equal to 'COMPLETED'", testRequestUpdate.getStatus() == RequestStatus.COMPLETED);
+		assertThat("The suggestion of both the objects created should be same", testRequest.getLabResult().getResult() == testRequestUpdate.getLabResult().getResult());
 	}
 
 	@Test
@@ -117,7 +145,14 @@ class ConsultationControllerTest {
 
 		// Use assertThat() method to perform the following comparison
 		// the exception message should be contain the string "Invalid ID"
-
+		CreateConsultationRequest CreateConsultationRequest = getCreateConsultationRequest(testRequest);
+		
+		
+		ResponseStatusException result = assertThrows(ResponseStatusException.class, () -> {
+			consultationController.updateConsultation(testRequest.getRequestId(), CreateConsultationRequest);
+		});
+		
+		assertThat("Invalid ID", result.getReason().equals("Invalid ID"));
 	}
 
 	@Test
@@ -139,6 +174,14 @@ class ConsultationControllerTest {
 		// above created object as second parameter
 		// Refer to the TestRequestControllerTest to check how to use assertThrows()
 		// method
+		
+		CreateConsultationRequest CreateConsultationRequest = getCreateConsultationRequest(testRequest);
+		CreateConsultationRequest.setSuggestion(null);
+		
+		ResponseStatusException result = assertThrows(ResponseStatusException.class, () -> {
+			consultationController.updateConsultation(testRequest.getRequestId(), CreateConsultationRequest);
+		});
+		
 
 	}
 
@@ -150,8 +193,24 @@ class ConsultationControllerTest {
 		// else if the lab result status is Negative, set the doctor suggestion as
 		// "NO_ISSUES" and comments as "Ok"
 		// Return the object
-
-		return null; // Replace this line with your code
+		CreateLabResult createLabResult = new CreateLabResult();
+		createLabResult.setBloodPressure("100");
+		createLabResult.setComments("Negative");
+		createLabResult.setHeartBeat("90");
+		createLabResult.setTemperature("79");
+		createLabResult.setResult(TestStatus.POSITIVE);
+	
+		CreateConsultationRequest createConsultationRequest = new CreateConsultationRequest();
+		
+		if(createLabResult.getResult() == TestStatus.POSITIVE) {
+			createConsultationRequest.setSuggestion(DoctorSuggestion.HOME_QUARANTINE);
+			createConsultationRequest.setComments("Stay at Home and do medication");
+		}else if(createLabResult.getResult() == TestStatus.NEGATIVE) {
+			createConsultationRequest.setSuggestion(DoctorSuggestion.NO_ISSUES);
+			createConsultationRequest.setComments("OK");
+		}else {
+		}
+		return createConsultationRequest; // Replace this line with your code
 
 	}
 
